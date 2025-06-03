@@ -1,0 +1,140 @@
+body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+      
+        .form-label {
+            font-weight: 500;
+        }
+        .btn-primary, .btn-success, .btn-info, .btn-danger {
+            font-size: 1.1rem;
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .btn-outline-secondary {
+            border-radius: 10px;
+        }
+        .table {
+            margin-top: 30px;
+            border-radius: 10px;
+            overflow: hidden; /* Ensures rounded corners for table */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .table th, .table td {
+            vertical-align: middle;
+            padding: 12px;
+        }
+        .table thead th {
+            background-color: #087C65;
+            color: white;
+            border-bottom: none;
+        }
+        .table tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        /* Colores de gravedad */
+        .bg-critical { background-color: #dc3545 !important; color: white; } /* Rojo */
+        .bg-urgent { background-color: #fd7e14 !important; color: white; } /* Naranja */
+        .bg-moderate { background-color: #ffc107 !important; color: #343a40; } /* Amarillo */
+        .bg-mild { background-color: #28a745 !important; color: white; } /* Verde */
+
+        .alert-custom {
+            border-radius: 10px;
+            font-weight: 500;
+            margin-top: 20px;
+        }
+        .critical-alert {
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.02); }
+        }
+        .form-floating > label {
+            padding-left: 1.25rem;
+        }
+        .form-floating > .form-control, .form-floating > .form-select {
+            padding-top: 1.625rem;
+            padding-bottom: 0.625rem;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #c7ae4c;
+            color: white;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+        }
+        .card-title
+        {
+            margin: auto;
+            text-align: center;
+            padding: 20px;
+        }
+        .card-title:hover
+        {
+            margin: auto;
+            text-align: center;
+            color: #087C65;
+            padding: 20px;
+        }
+        .login-container, .main-app-container {
+            display: none; /* Hidden by default */
+            
+        }
+        .login-container.active, .main-app-container.active {
+            display: block;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+
+        /* Styles for section visibility */
+        .content-section {
+            display: none;
+           
+            margin: auto;
+            padding: 10px;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .btn-primary {
+            background-color: #087C65;
+            border-color: #087C65;
+        }
+           .btn-primary:hover{
+            background-color: #087C65;
+             border-color: #087C65;
+
+        }
+         .bg-primary {
+            background-color: #087C65 !important;
+            border-color: #087C65 !important;
+        }
+
+        .imagenfondo
+        {
+            background-image: url('../img/descarga.png');
+            
+            /*background-repeat: no-repeat; /* Prevents the image from repeating */
+            background-size: cover; /* Ensures the image covers the entire element */
+            background-position: center; /* Centers the image */
+            padding: 10px;
+            margin: auto;
+             border-radius: 20px;
+             
+  
+        }
+        .borde {
+             border: 2px solid #087C65;
+             align-items: center;
+             margin: auto;
+        }
