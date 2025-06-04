@@ -35,37 +35,7 @@ function validatePassword(password) {
 
 // --- Page routing logic (adapt if you have it) ---
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Password Toggle Functionality ---
-    // Select all toggle password buttons
-    const togglePasswordButtons = document.querySelectorAll('.toggle-password');
-
-    togglePasswordButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const targetInputId = button.getAttribute('data-target');
-            const passwordInput = document.getElementById(targetInputId);
-            const eyeIcon = button.querySelector('svg'); // Get the SVG icon inside the button
-
-            // Toggle the type attribute
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-
-            // Toggle the eye icon (Bootstrap Icons - eye-fill / eye-slash-fill)
-            if (type === 'text') {
-                eyeIcon.innerHTML = `
-                    <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5S0 8 0 8a11.744 11.744 0 0 1 1.64-2.185A6.793 6.793 0 0 1 8 2.5c2.627 0 4.24 1.229 5.235 2.573q.745 1.187 1.402 2.538zm-1.833 2.548.223-.447a1.644 1.644 0 0 0-.251-.15C11.72 12.31 10.743 13 8 13c-1.758 0-2.68-.52-3.218-.88l-.662 1.26A8.107 8.107 0 0 0 8 14.5c4.5 0 7.1-3.11 7.854-4.888q.264-.531.67-1.12l.344-.667a11.734 11.734 0 0 0-4.64-3.053zm-6.716-2.887-.643.164A6.792 6.792 0 0 1 8 4c1.867 0 3.133.565 3.692 1.139l.2.343q.434.711.912 1.52zm.352 3.5.766-.192a4.527 4.527 0 0 0-1.75-1.76l-.492.83zm4.24-3.138.847.211c-.452.766-.957 1.615-1.478 2.38l-.758-.192zM1.161 8a13 13 0 0 0 1.996 2.624l-.56-.897A11.743 11.743 0 0 1 1.16 8z"/>
-                `; // eye-slash-fill path
-            } else {
-                eyeIcon.innerHTML = `
-                    <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
-                    <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
-                `; // eye-fill path
-            }
-            // Add or remove a class to style the button if needed (e.g., btn-primary vs btn-outline-secondary)
-            button.classList.toggle('btn-primary');
-            button.classList.toggle('btn-outline-secondary');
-        });
-    });
-
+    
     const currentPage = window.location.pathname.split('/').pop();
 
     if (currentPage === 'index.html' || currentPage === '') { // Login page logic
