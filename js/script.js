@@ -1,519 +1,387 @@
- // Variables globales
-        let patients = [];
-        const GRAVITY_ORDER = {
-            'critico': 4,
-            'urgente': 3,
-            'moderado': 2,
-            'leve': 1
-        };
-        const USERS_STORAGE_KEY = 'emergencyPatientsAppUsers';
-        const PATIENTS_STORAGE_KEY = 'emergencyPatientsAppPatients';
-        let currentUser = null;
+// --- Global variables and initial setup (existing) ---
+const authForm = document.getElementById('authForm');
+const registerBtn = document.getElementById('registerBtn'); // This will now be a simple link in index.html
+const loginBtn = document.getElementById('loginBtn');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+const passwordFeedback = document.getElementById('passwordFeedback');
 
-        // Referencias a elementos del DOM
+// Add new elements for registration form
+const registerForm = document.getElementById('registerForm'); // This will only exist on register.html
+const registerUsernameInput = document.getElementById('registerUsername');
+const registerPasswordInput = document.getElementById('registerPassword');
+const confirmPasswordInput = document.getElementById('confirmPassword');
+const registerPasswordFeedback = document.getElementById('registerPasswordFeedback');
+const confirmPasswordFeedback = document.getElementById('confirmPasswordFeedback');
+
+
+// Function to save users (simplified for client-side storage)
+function saveUser(username, password) {
+    let users = JSON.parse(localStorage.getItem('users')) || {};
+    users[username] = password; // Store username and password
+    localStorage.setItem('users', JSON.stringify(users));
+}
+
+// Function to validate password strength
+function validatePassword(password) {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password);
+
+    return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+}
+
+// --- Page routing logic (adapt if you have it) ---
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Password Toggle Functionality ---
+    // Select all toggle password buttons
+    const togglePasswordButtons = document.querySelectorAll('.toggle-password');
+
+    togglePasswordButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetInputId = button.getAttribute('data-target');
+            const passwordInput = document.getElementById(targetInputId);
+            const eyeIcon = button.querySelector('svg'); // Get the SVG icon inside the button
+
+            // Toggle the type attribute
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // Toggle the eye icon (Bootstrap Icons - eye-fill / eye-slash-fill)
+            if (type === 'text') {
+                eyeIcon.innerHTML = `
+                    <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5S0 8 0 8a11.744 11.744 0 0 1 1.64-2.185A6.793 6.793 0 0 1 8 2.5c2.627 0 4.24 1.229 5.235 2.573q.745 1.187 1.402 2.538zm-1.833 2.548.223-.447a1.644 1.644 0 0 0-.251-.15C11.72 12.31 10.743 13 8 13c-1.758 0-2.68-.52-3.218-.88l-.662 1.26A8.107 8.107 0 0 0 8 14.5c4.5 0 7.1-3.11 7.854-4.888q.264-.531.67-1.12l.344-.667a11.734 11.734 0 0 0-4.64-3.053zm-6.716-2.887-.643.164A6.792 6.792 0 0 1 8 4c1.867 0 3.133.565 3.692 1.139l.2.343q.434.711.912 1.52zm.352 3.5.766-.192a4.527 4.527 0 0 0-1.75-1.76l-.492.83zm4.24-3.138.847.211c-.452.766-.957 1.615-1.478 2.38l-.758-.192zM1.161 8a13 13 0 0 0 1.996 2.624l-.56-.897A11.743 11.743 0 0 1 1.16 8z"/>
+                `; // eye-slash-fill path
+            } else {
+                eyeIcon.innerHTML = `
+                    <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+                    <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8m8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
+                `; // eye-fill path
+            }
+            // Add or remove a class to style the button if needed (e.g., btn-primary vs btn-outline-secondary)
+            button.classList.toggle('btn-primary');
+            button.classList.toggle('btn-outline-secondary');
+        });
+    });
+
+    const currentPage = window.location.pathname.split('/').pop();
+
+    if (currentPage === 'index.html' || currentPage === '') { // Login page logic
         const loginContainer = document.querySelector('.login-container');
         const mainAppContainer = document.querySelector('.main-app-container');
-        const authForm = document.getElementById('authForm');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const passwordFeedback = document.getElementById('passwordFeedback');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const loggedInUsernameSpan = document.getElementById('loggedInUsername'); // New element for username
-        const logoutBtn = document.getElementById('logoutBtn'); // Logout button
 
-        const patientForm = document.getElementById('patientForm');
-        const patientTableBody = document.getElementById('patientTableBody');
-        const criticalPatientAlertContainer = document.getElementById('criticalPatientAlertContainer');
-        const alertPatientName = document.getElementById('alertPatientName');
-        const criticalPatientToast = new bootstrap.Toast(document.getElementById('criticalPatientToast'));
-        const criticalPatientNameToast = document.getElementById('criticalPatientName');
-
-        const countCritical = document.getElementById('countCritical');
-        const countUrgent = document.getElementById('countUrgent');
-        const countModerate = document.getElementById('countModerate');
-        const countMild = document.getElementById('countMild');
-
-        // New DOM elements for sections
-        const patientRegistrationSection = document.getElementById('patientRegistrationSection');
-        const patientStatisticsSection = document.getElementById('patientStatisticsSection');
-        const navLinks = document.querySelectorAll('.nav-link[data-target]');
-        const fecha_actual = Date.now();
-
-        // --- Funciones de Utilidad ---
-
-        /**
-         * Guarda los usuarios en el almacenamiento local.
-         * @param {Object} users - Objeto de usuarios.
-         */
-        function saveUsers(users) {
-            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+        // Check if user is already logged in
+        const loggedInUser = localStorage.getItem('loggedInUser');
+        if (loggedInUser) {
+            loginContainer.classList.remove('active');
+            mainAppContainer.classList.add('active'); // Show main app
+            document.getElementById('loggedInUsername').textContent = loggedInUser;
+            // Load patient statistics if applicable (your existing logic)
+            loadPatientStatistics();
+            loadPatientsIntoTable();
+        } else {
+            loginContainer.classList.add('active'); // Show login
+            mainAppContainer.classList.remove('active'); // Hide main app
         }
 
-        /**
-         * Carga los usuarios del almacenamiento local.
-         * @returns {Object} Objeto de usuarios.
-         */
-        function loadUsers() {
-            const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-            return usersJson ? JSON.parse(usersJson) : {};
-        }
+        // --- Login Form Submission ---
+        if (authForm) {
+            authForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const username = usernameInput.value;
+                const password = passwordInput.value;
 
-        /**
-         * Guarda los pacientes para el usuario actual en el almacenamiento local.
-         */
-        function savePatients() {
-            if (currentUser) {
-                const allPatients = loadAllPatientsData();
-                allPatients[currentUser] = patients;
-                localStorage.setItem(PATIENTS_STORAGE_KEY, JSON.stringify(allPatients));
-            }
-        }
+                let users = JSON.parse(localStorage.getItem('users')) || {};
 
-        /**
-         * Carga todos los datos de pacientes de todos los usuarios.
-         * @returns {Object} Objeto que contiene los pacientes por usuario.
-         */
-        function loadAllPatientsData() {
-            const patientsJson = localStorage.getItem(PATIENTS_STORAGE_KEY);
-            return patientsJson ? JSON.parse(patientsJson) : {};
-        }
-
-        /**
-         * Carga los pacientes del usuario actual del almacenamiento local.
-         */
-        function loadPatients() {
-            if (currentUser) {
-                const allPatients = loadAllPatientsData();
-                patients = allPatients[currentUser] || [];
-            } else {
-                patients = [];
-            }
-        }
-
-        /**
-         * Muestra un mensaje de tostada (toast) de Bootstrap.
-         * @param {string} message - El mensaje a mostrar.
-         * @param {string} type - El tipo de alerta (e.g., 'success', 'danger', 'warning').
-         */
-        function showToast(message, type = 'info') {
-            const toastElement = document.createElement('div');
-            toastElement.classList.add('toast', 'align-items-center', 'text-white', `bg-${type}`, 'border-0');
-            toastElement.setAttribute('role', 'alert');
-            toastElement.setAttribute('aria-live', 'assertive');
-            toastElement.setAttribute('aria-atomic', 'true');
-            toastElement.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            `;
-            document.querySelector('.toast-container').appendChild(toastElement);
-            const bsToast = new bootstrap.Toast(toastElement, { delay: 3000 });
-            bsToast.show();
-            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
-        }
-
-        // --- Funciones de Autenticación ---
-
-        /**
-         * Maneja el envío del formulario de autenticación.
-         * @param {Event} event - El evento de envío.
-         */
-        authForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value.trim();
-            const users = loadUsers();
-
-            // Validación de contraseña
-            if (password.length < 8) {
-                passwordInput.classList.add('is-invalid');
-                passwordFeedback.style.display = 'block';
-                return;
-            } else {
-                passwordInput.classList.remove('is-invalid');
-                passwordFeedback.style.display = 'none';
-            }
-
-            if (event.submitter === loginBtn) {
-                // Lógica de inicio de sesión
-                if (users[username] && users[username] === password) { // En un entorno real, la contraseña estaría hasheada
-                    currentUser = username;
-                    localStorage.setItem('currentUser', currentUser); // Store current user session
-                    loggedInUsernameSpan.textContent = currentUser; // Display username in navbar
-                    loadPatients(); // Cargar pacientes del usuario logueado
-                    renderPatientTable();
-                    updatePatientCounts();
+                if (users[username] && users[username] === password) {
+                    localStorage.setItem('loggedInUser', username);
                     loginContainer.classList.remove('active');
                     mainAppContainer.classList.add('active');
-                    showSection('patientRegistrationSection'); // Show registration section by default
-                    showToast('Inicio de sesión exitoso.', 'success');
+                    document.getElementById('loggedInUsername').textContent = username;
+                    // Load patient statistics and table after successful login
+                    loadPatientStatistics();
+                    loadPatientsIntoTable();
                 } else {
-                    showToast('Usuario o contraseña incorrectos.', 'danger');
+                    alert('Usuario o contraseña incorrectos.');
                 }
-            }
-        });
+            });
+        }
 
-        /**
-         * Maneja el registro de un nuevo usuario.
-         */
-        registerBtn.addEventListener('click', function() {
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value.trim();
-             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&/]{8,}$/;
-            const users = loadUsers();
-
-            // Validación de contraseña
-            
-            if (!passwordRegex.test(password)) {
-                
-                passwordInput.classList.add('is-invalid');
-                passwordFeedback.style.display = 'block';
-
-                return;
-            } else {
-                passwordInput.classList.remove('is-invalid');
-                passwordFeedback.style.display = 'none';
-            }
-
-            if (username && password) {
-                if (users[username]) {
-                    showToast('El usuario ya existe. Por favor, inicie sesión.', 'warning');
+        // --- Password input validation (for login form) ---
+        if (passwordInput) {
+            passwordInput.addEventListener('input', () => {
+                if (!validatePassword(passwordInput.value) && passwordInput.value.length > 0) {
+                    passwordInput.classList.add('is-invalid');
+                    passwordFeedback.style.display = 'block';
                 } else {
-                    users[username] = password; // En un entorno real, la contraseña estaría hasheada
-                    saveUsers(users);
-                    showToast('Registro exitoso. Ahora puede iniciar sesión.', 'success');
-                    // Limpiar campos después de registrar
-                    usernameInput.value = '';
-                    passwordInput.value = '';
-                  
+                    passwordInput.classList.remove('is-invalid');
+                    passwordFeedback.style.display = 'none';
                 }
-            } else {
-                showToast('Por favor, ingrese un nombre de usuario y contraseña.', 'warning');
-            }
+            });
+        }
+
+    } else if (currentPage === 'register.html') { // Registration page logic
+        if (registerForm) {
+            registerForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent default Bootstrap validation behavior for now
+
+                const username = registerUsernameInput.value.trim();
+                const password = registerPasswordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+
+                let isValid = true;
+
+                // Validate Username
+                if (username === '') {
+                    registerUsernameInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    registerUsernameInput.classList.remove('is-invalid');
+                }
+
+                // Validate Password Strength
+                if (!validatePassword(password)) {
+                    registerPasswordInput.classList.add('is-invalid');
+                    registerPasswordFeedback.style.display = 'block';
+                    isValid = false;
+                } else {
+                    registerPasswordInput.classList.remove('is-invalid');
+                    registerPasswordFeedback.style.display = 'none';
+                }
+
+                // Validate Password Match
+                if (password !== confirmPassword) {
+                    confirmPasswordInput.classList.add('is-invalid');
+                    confirmPasswordFeedback.style.display = 'block';
+                    isValid = false;
+                } else {
+                    confirmPasswordInput.classList.remove('is-invalid');
+                    confirmPasswordFeedback.style.display = 'none';
+                }
+
+                if (isValid) {
+                    let users = JSON.parse(localStorage.getItem('users')) || {};
+                    
+                    if (users[username]) {
+                        alert('El nombre de usuario ya existe. Por favor, elija otro.');
+                        registerUsernameInput.classList.add('is-invalid'); // Mark username as invalid
+                    } else {
+                        saveUser(username, password);
+                        alert('Registro exitoso. Ahora puede iniciar sesión.');
+                        window.location.href = 'index.html'; // Redirect to login page
+                    }
+                } else {
+                    alert('Por favor, corrija los errores en el formulario.');
+                }
+            });
+        }
+    }
+
+    // --- Logout Button (remains the same) ---
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html'; // Redirect to login page
         });
+    }
 
-        /**
-         * Maneja el cierre de sesión del usuario.
-         */
-        logoutBtn.addEventListener('click', function() {
-            currentUser = null;
-            localStorage.removeItem('currentUser'); // Clear current user session
-            patients = []; // Clear patient data on logout
-            renderPatientTable(); // Clear table
-            updatePatientCounts(); // Reset counts
-            // mainAppContainer.classList.remove('active');
-            // loginContainer.classList.add('active');
-            usernameInput.value = ''; // Clear login form fields
-            passwordInput.value = '';
-            criticalPatientAlertContainer.classList.add('d-none'); // Hide critical alert
-            showToast('Sesión cerrada.', 'info');
-           location.reload();
-            
-        });
+    // --- Tab/Section Switching (existing) ---
+    document.querySelectorAll('[data-target]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('data-target');
 
-        // --- Funciones de Navegación de Secciones ---
-
-        /**
-         * Muestra la sección del contenido especificada y oculta las demás.
-         * @param {string} sectionId - El ID de la sección a mostrar.
-         */
-        function showSection(sectionId) {
+            // Remove 'active' from all content sections and add 'active' to the target
             document.querySelectorAll('.content-section').forEach(section => {
                 section.classList.remove('active');
             });
-            document.getElementById(sectionId).classList.add('active');
+            document.getElementById(targetId).classList.add('active');
 
-            // Update active state in nav links
-            navLinks.forEach(link => {
-                if (link.dataset.target === sectionId) {
-                    link.classList.add('active');
-                } else {
-                    link.classList.remove('active');
-                }
+            // Update active class for nav links
+            document.querySelectorAll('.nav-link').forEach(navLink => {
+                navLink.classList.remove('active');
             });
-        }
-
-        /**
-         * Agrega listeners para los enlaces de navegación.
-         */
-        navLinks.forEach(link => {
-            link.addEventListener('click', function(event) {
-                event.preventDefault();
-                showSection(this.dataset.target);
-            });
+            this.classList.add('active');
         });
+    });
 
-        // --- Funciones de Validación de Formulario de Pacientes ---
-
-        /**
-         * Valida un campo de entrada y aplica las clases de Bootstrap correspondientes.
-         * @param {HTMLElement} inputElement - El elemento de entrada a validar.
-         * @returns {boolean} True si el campo es válido, false en caso contrario.
-         */
-        function validateInput(inputElement) {
-            if (inputElement.type === 'radio') {
-                const radioGroup = document.querySelectorAll(`input[name="${inputElement.name}"]`);
-                const isChecked = Array.from(radioGroup).some(radio => radio.checked);
-                if (!isChecked) {
-                    radioGroup.forEach(radio => radio.classList.add('is-invalid'));
-                    return false;
-                } else {
-                    radioGroup.forEach(radio => radio.classList.remove('is-invalid'));
-                    return true;
-                }
-            } else if (inputElement.tagName === 'SELECT') {
-                if (!inputElement.value) {
-                    inputElement.classList.add('is-invalid');
-                    return false;
-                } else {
-                    inputElement.classList.remove('is-invalid');
-                    return true;
-                }
-            } else {
-                if (!inputElement.value.trim()) {
-                    inputElement.classList.add('is-invalid');
-                    return false;
-                } else {
-                    inputElement.classList.remove('is-invalid');
-                    return true;
-                }
-            }
-        }
-
-        /**
-         * Valida la edad del paciente.
-         * @returns {boolean} True si la edad es válida, false en caso contrario.
-         */
-        function validateEdad() {
-            const edadInput = document.getElementById('edad');
-            const edad = parseInt(edadInput.value);
-            if (isNaN(edad) || edad <= 0) {
-                edadInput.classList.add('is-invalid');
-                return false;
-            } else {
-                edadInput.classList.remove('is-invalid');
-                return true;
-            }
-        }
-
-        /**
-         * Valida el documento de identidad.
-         * @returns {boolean} True si el documento es válido, false en caso contrario.
-         */
-        function validateDocumento() {
-            const documentoInput = document.getElementById('documentoIdentidad');
-            if (documentoInput.value.trim().length < 5) {
-                documentoInput.classList.add('is-invalid');
-                return false;
-            } else {
-                documentoInput.classList.remove('is-invalid');
-                return true;
-            }
-        }
-
-        /**
-         * Agrega listeners para validación en tiempo real.
-         */
-        function addRealtimeValidationListeners() {
-            document.getElementById('edad').addEventListener('input', validateEdad);
-            document.getElementById('documentoIdentidad').addEventListener('input', validateDocumento);
-
-            const requiredInputs = patientForm.querySelectorAll('[required]');
-            requiredInputs.forEach(input => {
-                input.addEventListener('input', () => validateInput(input));
-                if (input.type === 'radio') {
-                    input.addEventListener('change', () => validateInput(input));
-                }
-            });
-        }
-
-        // --- Funciones de Gestión de Pacientes ---
-
-        /**
-         * Maneja el envío del formulario de registro de pacientes.
-         * @param {Event} event - El evento de envío.
-         */
+    // --- Patient form submission (existing) ---
+    const patientForm = document.getElementById('patientForm');
+    if (patientForm) {
         patientForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevenir el envío por defecto del formulario
+            event.preventDefault();
+            event.stopPropagation(); // Stop event propagation for Bootstrap validation
 
-            let formIsValid = true;
-
-            // Validar todos los campos requeridos
-            const requiredInputs = patientForm.querySelectorAll('[required]');
-            requiredInputs.forEach(input => {
-                if (!validateInput(input)) {
-                    formIsValid = false;
-                }
-            });
-
-            // Validaciones específicas
-            if (!validateEdad()) {
-                formIsValid = false;
-            }
-            if (!validateDocumento()) {
-                formIsValid = false;
+            // Check if form is valid using Bootstrap's built-in validation
+            if (!this.checkValidity()) {
+                this.classList.add('was-validated');
+                return; // Stop if form is invalid
             }
 
-            if (!formIsValid) {
-                showToast('Por favor, complete todos los campos requeridos y corrija los errores.', 'danger');
-                return;
-            }
-            
-            // Recopilar datos del formulario
-            const newPatient = {
-                id: Date.now(), // ID único para el paciente
-                nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
+            const patientData = {
+                nombreCompleto: document.getElementById('nombreCompleto').value,
                 edad: parseInt(document.getElementById('edad').value),
-                genero: document.querySelector('input[name="genero"]:checked').value,
-                documentoIdentidad: document.getElementById('documentoIdentidad').value.trim(),
-                sintomas: document.getElementById('sintomas').value.trim(),
+                genero: document.querySelector('input[name="genero"]:checked')?.value || '',
+                documentoIdentidad: document.getElementById('documentoIdentidad').value,
                 nivelGravedad: document.getElementById('nivelGravedad').value,
-                tratamiento: document.getElementById('tratamiento').value.trim(),
-                medicamentos: document.getElementById('medicamentos').value.trim(),
-                examenes: document.getElementById('examenes').value
-                        
+                sintomas: document.getElementById('sintomas').value,
+                tratamiento: document.getElementById('tratamiento').value,
+                medicamentos: document.getElementById('medicamentos').value,
+                examenes: document.getElementById('examenes').value,
+                fechaRegistro: new Date().toLocaleString()
             };
 
-            patients.push(newPatient);
-            savePatients(); // Guardar pacientes en localStorage
+            savePatient(patientData);
+            updateStatistics();
+            loadPatientsIntoTable();
+            
+            // Show critical patient toast if applicable
+            if (patientData.nivelGravedad === 'critico') {
+                document.getElementById('criticalPatientName').textContent = patientData.nombreCompleto;
+                const toastLiveExample = document.getElementById('criticalPatientToast');
+                const toastBootstrap = bootstrap.Toast.getOrCreateInstance(toastLiveExample);
+                toastBootstrap.show();
 
-            renderPatientTable(); // Actualizar la tabla
-            updatePatientCounts(); // Actualizar contadores
-            patientForm.reset(); // Limpiar el formulario
+                document.getElementById('alertPatientName').textContent = patientData.nombreCompleto;
+                document.getElementById('criticalPatientAlertContainer').classList.remove('d-none');
+            } else {
+                document.getElementById('criticalPatientAlertContainer').classList.add('d-none');
+            }
 
-            // Remover clases de validación después de un registro exitoso
-            patientForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            patientForm.classList.remove('was-validated'); // Remover la clase de Bootstrap si se usó
-            showSection('patientStatisticsSection');
-            showToast('Paciente registrado exitosamente.', 'success');
+            this.reset(); // Reset the form after submission
+            this.classList.remove('was-validated'); // Remove validation styles
+            // Reset gender radio buttons validation style manually
+            document.querySelectorAll('input[name="genero"]').forEach(radio => {
+                radio.classList.remove('is-invalid');
+            });
+            // Reset select elements as well
+            document.getElementById('nivelGravedad').classList.remove('is-invalid');
+            document.getElementById('examenes').classList.remove('is-invalid');
+        });
+    }
 
-            // Mostrar alerta si el paciente es crítico
-            if (newPatient.nivelGravedad === 'critico') {
-                alertPatientName.textContent = newPatient.nombreCompleto;
-                criticalPatientAlertContainer.classList.remove('d-none');
-                criticalPatientToast.show();
-                criticalPatientNameToast.textContent = newPatient.nombreCompleto;
+    // --- Patient data storage and statistics (existing) ---
+    function getPatients() {
+        return JSON.parse(localStorage.getItem('patients')) || [];
+    }
+
+    function savePatient(patient) {
+        const patients = getPatients();
+        patients.push(patient);
+        localStorage.setItem('patients', JSON.stringify(patients));
+    }
+
+    function updateStatistics() {
+        const patients = getPatients();
+        let criticalCount = 0;
+        let urgentCount = 0;
+        let moderateCount = 0;
+        let mildCount = 0;
+
+        patients.forEach(patient => {
+            switch (patient.nivelGravedad) {
+                case 'critico':
+                    criticalCount++;
+                    break;
+                case 'urgente':
+                    urgentCount++;
+                    break;
+                case 'moderado':
+                    moderateCount++;
+                    break;
+                case 'leve':
+                    mildCount++;
+                    break;
             }
         });
 
-        /**
-         * Renderiza la tabla de pacientes, ordenándolos por gravedad.
-         */
-        function renderPatientTable() {
-            // Ordenar pacientes por nivel de gravedad
-            const sortedPatients = [...patients].sort((a, b) => {
-                return GRAVITY_ORDER[b.nivelGravedad] - GRAVITY_ORDER[a.nivelGravedad];
-            });
+        document.getElementById('countCritical').textContent = criticalCount;
+        document.getElementById('countUrgent').textContent = urgentCount;
+        document.getElementById('countModerate').textContent = moderateCount;
+        document.getElementById('countMild').textContent = mildCount;
+    }
 
-            patientTableBody.innerHTML = ''; // Limpiar tabla antes de renderizar
-
-            if (sortedPatients.length === 0) {
-                patientTableBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">No hay pacientes registrados.</td></tr>`;
-                return;
+    function loadPatientStatistics() {
+        // Ensure this function is called when relevant data might be available
+        if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+            // Only update stats if we're on the main app page after login
+            const mainAppContainer = document.querySelector('.main-app-container');
+            if (mainAppContainer && mainAppContainer.classList.contains('active')) {
+                updateStatistics();
             }
+        }
+    }
 
-            sortedPatients.forEach(patient => {
+
+    function loadPatientsIntoTable() {
+        const patientTableBody = document.getElementById('patientTableBody');
+        if (patientTableBody) { // Check if the table body exists (i.e., we are on the stats page)
+            const patients = getPatients();
+            patientTableBody.innerHTML = ''; // Clear existing rows
+
+            patients.forEach((patient, index) => {
                 const row = patientTableBody.insertRow();
-                let gravityClass = '';
+
+                // Add a class based on severity for styling (if you have these in style.css)
+                let severityClass = '';
                 switch (patient.nivelGravedad) {
                     case 'critico':
-                        gravityClass = 'bg-critical';
+                        severityClass = 'table-danger';
                         break;
                     case 'urgente':
-                        gravityClass = 'bg-urgent';
+                        severityClass = 'table-warning';
                         break;
                     case 'moderado':
-                        gravityClass = 'bg-moderate';
+                        severityClass = 'table-info';
                         break;
                     case 'leve':
-                        gravityClass = 'bg-mild';
+                        severityClass = 'table-success';
                         break;
                 }
+                row.classList.add(severityClass);
 
-                row.classList.add(gravityClass);
 
-                row.innerHTML = `
-                    <td>${patient.nombreCompleto}</td>
-                    <td>${patient.edad}</td>
-                    <td>${patient.genero}</td>
-                    <td>${patient.documentoIdentidad}</td>
-                    <td>${patient.nivelGravedad.charAt(0).toUpperCase() + patient.nivelGravedad.slice(1)}</td>
-                    <td>${patient.sintomas}</td>
-                    <td>${patient.tratamiento}</td>
-                    <td>${patient.medicamentos}</td>
-                    <td>${patient.examenes.charAt(0).toUpperCase() + patient.examenes.slice(1).replace(/_/g, ' ')}</td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm" data-id="${patient.id}">Eliminar</button>
-                    </td>
-                `;
-            });
+                row.insertCell().textContent = patient.nombreCompleto;
+                row.insertCell().textContent = patient.edad;
+                row.insertCell().textContent = patient.genero;
+                row.insertCell().textContent = patient.documentoIdentidad;
+                row.insertCell().textContent = patient.nivelGravedad;
+                row.insertCell().textContent = patient.sintomas;
+                row.insertCell().textContent = patient.tratamiento;
+                row.insertCell().textContent = patient.medicamentos;
+                row.insertCell().textContent = patient.examenes;
 
-            // Añadir event listeners a los botones de eliminar
-            patientTableBody.querySelectorAll('.btn-danger').forEach(button => {
-                button.addEventListener('click', function() {
-                    const patientId = parseInt(this.dataset.id);
-                    deletePatient(patientId);
+                const actionsCell = row.insertCell();
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Eliminar';
+                deleteButton.classList.add('btn', 'btn-danger', 'btn-sm');
+                deleteButton.addEventListener('click', () => {
+                    deletePatient(index);
                 });
+                actionsCell.appendChild(deleteButton);
             });
         }
+    }
 
-        /**
-         * Elimina un paciente de la lista.
-         * @param {number} id - El ID del paciente a eliminar.
-         */
-        function deletePatient(id) {
-            patients = patients.filter(patient => patient.id !== id);
-            savePatients();
-            renderPatientTable();
-            updatePatientCounts();
-            showToast('Paciente eliminado exitosamente.', 'info');
+    function deletePatient(index) {
+        let patients = getPatients();
+        patients.splice(index, 1); // Remove patient at the given index
+        localStorage.setItem('patients', JSON.stringify(patients));
+        updateStatistics(); // Update counts
+        loadPatientsIntoTable(); // Reload table
+        // Hide critical alert if the deleted patient was the critical one and no others exist
+        const criticalPatients = patients.filter(p => p.nivelGravedad === 'critico');
+        if (criticalPatients.length === 0) {
+            document.getElementById('criticalPatientAlertContainer').classList.add('d-none');
         }
+    }
 
-        /**
-         * Actualiza los contadores de pacientes por nivel de gravedad.
-         */
-        function updatePatientCounts() {
-            const counts = {
-                critico: 0,
-                urgente: 0,
-                moderado: 0,
-                leve: 0
-            };
+    // Call functions on initial load for relevant sections
+    loadPatientStatistics();
+    loadPatientsIntoTable();
 
-            patients.forEach(patient => {
-                counts[patient.nivelGravedad]++;
-            });
-
-            countCritical.textContent = counts.critico;
-            countUrgent.textContent = counts.urgente;
-            countModerate.textContent = counts.moderado;
-            countMild.textContent = counts.leve;
-        }
-
-        // --- Inicialización ---
-
-        /**
-         * Función para inicializar la aplicación al cargar la página.
-         */
-        document.addEventListener('DOMContentLoaded', function() {
-            addRealtimeValidationListeners(); // Configurar validación en tiempo real
-
-            // Ocultar la alerta crítica al inicio
-            criticalPatientAlertContainer.classList.add('d-none');
-
-            // Check for existing user session
-            currentUser = localStorage.getItem('currentUser');
-            if (currentUser) {
-                loggedInUsernameSpan.textContent = currentUser;
-                loadPatients();
-                renderPatientTable();
-                updatePatientCounts();
-                loginContainer.classList.remove('active');
-                mainAppContainer.classList.add('active');
-                showSection('patientStatisticsSection'); // Show registration section by default on login
-            } else {
-                loginContainer.classList.add('active'); // Show login if no session
-            }
-        });  
+}); // End of DOMContentLoaded
